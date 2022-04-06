@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>Kakao 지도 시작하기</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM"
+        crossorigin="anonymous"></script>
+</head>
+
+<body>
+    <div id="map" class="map mb-3">Loading...</div>
+
+    <div id="app" class="container mb-3" style="max-width: 80%; margin: 0 aauto; padding: 20px;">
+
+        <div class="row" style="height: 100px;">
+            <div class="col-4">
+                <div class=""><strong>구현 기능</strong></div>
+                <div>
+                    현재 위치, 지도 검색, 거리순, 10건씩 더보기, Marker
+                </div>
+            </div>
+            <div class="col-5">
+                <div class=""><strong>kakao API 허용 도메인</strong></div>
+                <div>
+                    http://localhost:8081/ http://localhost:5500/
+                    ( Ref: <a href="https://apis.map.kakao.com/web/documentation/#services_Places_keywordSearch"
+                        target="_blank">keywordSearch</a> )
+                </div>
+            </div>
+            <div class="col-3">
+                <div class="input-group mb-3" v-if="showMap">
+                    <input type="text" size="50" id="keyword" value="치킨" class="form-control" v-on:keyup.enter="search">
+                    <button @click="search" class="btn btn-secondary">Search</button>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="showMap">
+
+            <h4>Result</h4>
+            <div v-if="noData">
+                <div class="alert alert-danger" role="alert">
+                    {{ noData }}
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th class="text-right">#</th>
+                            <th>상호</th>
+                            <th>주소</th>
+                            <th>전화</th>
+                            <th class="text-right">거리(m)</th>
+                            <th class="text-center">URL</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(list, index) in totoalResult" :key="index">
+                            <td class="text-right">{{ "#"+(index + 1) }}</td>
+                            <td>{{ list.place_name }}</td>
+                            <td>
+                                {{ list.road_address_name }} <a href="#" @click="setMarker(list.y, list.x)"><svg
+                                        xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                        class="bi bi-map" viewBox="0 0 16 16">
+                                        <path fill-rule="evenodd"
+                                            d="M15.817.113A.5.5 0 0 1 16 .5v14a.5.5 0 0 1-.402.49l-5 1a.502.502 0 0 1-.196 0L5.5 15.01l-4.902.98A.5.5 0 0 1 0 15.5v-14a.5.5 0 0 1 .402-.49l5-1a.5.5 0 0 1 .196 0L10.5.99l4.902-.98a.5.5 0 0 1 .415.103zM10 1.91l-4-.8v12.98l4 .8V1.91zm1 12.98 4-.8V1.11l-4 .8v12.98zm-6-.8V1.11l-4 .8v12.98l4-.8z" />
+                                    </svg></a>
+                            </td>
+                            <td>{{ list.phone }}</td>
+                            <td class="text-right">{{ list.distance }}</td>
+                            <td class="text-center">
+                                <a :href="list.place_url" target="_blank"><svg xmlns="http://www.w3.org/2000/svg"
+                                        width="16" height="16" fill="currentColor" class="bi bi-arrow-up-right-square"
+                                        viewBox="0 0 16 16">
+                                        <path fill-rule="evenodd"
+                                            d="M15 2a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2zM0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm5.854 8.803a.5.5 0 1 1-.708-.707L9.243 6H6.475a.5.5 0 1 1 0-1h3.975a.5.5 0 0 1 .5.5v3.975a.5.5 0 1 1-1 0V6.707l-4.096 4.096z" />
+                                    </svg></a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div v-if="hasNextPage" style="text-align: center;">
+                <button @click="nextPage" class="btn btn-primary"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-lg" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2Z"/>
+                  </svg> 더 보기</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script type="text/javascript"
+        src="//dapi.kakao.com/v2/maps/sdk.js?appkey=2e74a348fa1b4a553906d4581ebb0853&libraries=services"></script>
+    <script>
+
+        // 옵션
+        let container = document.getElementById('map');
+        let map;
+        let places = new kakao.maps.services.Places();
+        let options;
+        localStorage.setItem("localSize", 10);
+        localStorage.setItem("localPage", 1);
+
+        // default position
+        let lat = 33.450701;
+        let lon = 126.570667;
+
+        // 뷰 인스턴스 생성
+        const vm = new Vue({
+            el: "#app",
+            data: {
+                totoalResult: [],
+                noData: "",
+                hasNextPage: false,
+                showMap: false
+            },
+            created() {
+                // 위치정보 사용 여부 판단
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(function (position) {
+                        lat = position.coords.latitude; // 위도
+                        lon = position.coords.longitude; // 경도
+                        showMap(lat, lon);
+                    });
+                } else {
+                    showMap(lat, lon);
+                }
+            },
+            methods: {
+                // 최초 검색
+                search() {
+                    this.totoalResult = [];
+                    localStorage.setItem("localPage", 1);
+                    getResult(localStorage.getItem("localSize"), 1);
+                },
+                // 추가 로드
+                nextPage() {
+                    getResult(localStorage.getItem("localSize"), getPage());
+                },
+                // 마커 이동
+                setMarker(lat, lon) {
+                    showMap(lat, lon);
+                }
+            }
+        })
+
+        // 지도 표시
+        function showMap(lat, lon) {
+            // console.log("lat", lat);
+            // console.log("lon", lon);
+
+            // 마커 설정 
+            let markerPosition = new kakao.maps.LatLng(lat, lon);
+            let marker = new kakao.maps.Marker({
+                position: markerPosition
+            });
+
+            // 지도 설정
+            let options = {
+                center: new kakao.maps.LatLng(lat, lon),
+                level: 3
+            };
+            map = new kakao.maps.Map(container, options);
+            marker.setMap(map);
+            vm.showMap = true;
+        }
+
+        // 페이지 설정
+        function getPage() {
+            localStorage.setItem("localPage", Number(localStorage.getItem("localPage")) + 1);
+            return localStorage.getItem("localPage");
+        }
+
+        // 검색
+        function getResult(size, inputPage) {
+            let callback = function (result, status, pagination) {
+                console.log(result);
+                if (status === kakao.maps.services.Status.OK) {
+                    vm.totoalResult = vm.totoalResult.concat(result);
+                    vm.hasNextPage = true;
+                    vm.noData = "";
+                    if (!pagination.hasNextPage) {
+                        vm.hasNextPage = false;
+                    }
+                } else {
+                    vm.noData = "No data";
+                    vm.totoalResult = [];
+                    vm.hasNextPage = false;
+                }
+            };
+            // 검색 옵션
+            options = {
+                size: size,
+                page: inputPage,
+                location: map.getCenter(),
+                sort: daum.maps.services.SortBy.DISTANCE
+            }
+            let keyword = document.getElementById('keyword').value;
+            places.keywordSearch(keyword, callback, options);
+        }
+
+    </script>
+
+    <style>
+        .map {
+            width: 100%;
+            height: 600px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: bisque;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+    </style>
+</body>
+
+</html>
